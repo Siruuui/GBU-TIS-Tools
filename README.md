@@ -5,7 +5,7 @@
 > 该脚本是通过抽象人对计算机的操作方法，提供节省流量并方便选课的功能。
 
 - 登录由用户在 GBU 统一认证门户手动完成，程序不要求学号或密码。
-- 程序从本地 `Cookie.txt` 读取当前会话 Cookie；**请勿上传真实 Cookie 到 GitHub**。
+- 程序从本地 `Cookie.txt` 第一行读取手动设置的教务系统域名，第二行读取当前会话 Cookie；**请勿上传真实域名和 Cookie 到 GitHub**。
 - 不使用并发高频请求；每次只会按顺序发送一门课程请求，每门课程最多尝试 3 次，间隔 1 秒。
 - 经测试，本版本于 2026-09-04 在 Python 3.10 环境下可正常选课。
 - 大部分安装报错等问题，都可以通过 AI 解决～
@@ -35,15 +35,15 @@ python -m pip install -r requirements.txt
 * 填写完整`任务名称`最可靠。
 * 部分课程没有提供`任务名称`填写`课程名称`也可以执行，但必须保证系统中必须只有一个同名班级。
 
-### 2. 配置 Cookie（登录）
+### 2. 配置域名和 Cookie（登录）
 
 > 建议在选课开始前再执行，避免 Cookie 过期
 
-1. 打开 <https://jwxt.gbu.edu.cn/>，以下使用 Chrome 浏览器示例。
+1. 打开学校提供的教务系统网址，记下域名。程序不内置教务系统域名，需要自行填写；以下使用 Chrome 浏览器示例。
 2. 通过 GBU 统一认证门户完成登录，确认页面已经显示个人信息。
 3. 打开开发者工具：macOS 使用 `⌘ + Option + I`，Windows 使用 `Ctrl + Shift + I`。
 4. 点击 **Network（网络）**，回到教务系统并刷新页面；也可以进入选课页面后再刷新。
-5. 在请求列表中选择域名为 `jwxt.gbu.edu.cn` 或 `main` 的请求。
+5. 在请求列表中选择教务系统域名下的 `main` 请求。
 6. 在右侧打开 **Headers（标头）**，展开 **Request Headers（请求标头）**，找到 `Cookie:`。
 7. 复制 `Cookie:` 后面的完整内容，例如：
 
@@ -52,7 +52,14 @@ python -m pip install -r requirements.txt
    ```
 
    不要复制整段 `Copy as cURL` 内容；只复制 Cookie 值即可。程序也接受带有 `Cookie:` 前缀的粘贴内容。
-8. 将复制的 Cookie 粘贴到项目根目录的 `Cookie.txt`，然后运行程序：
+8. 将项目根目录的 `Cookie.txt` 替换为两行内容：**第一行填教务系统域名，第二行填复制的完整 Cookie**。例如（仅为格式示例，请替换为自己的配置）：
+
+   ```text
+   https://jwxt.example.edu
+   SESSION=your_session_value; route=your_route_value
+   ```
+
+   域名可带 `http://` 或 `https://`，省略协议时默认使用 `https://`。不要填写 `/authentication/main` 等页面路径、账号或查询参数；Cookie 必须完整放在第二行，不要插入空行或额外行。保存后再运行程序。仓库中的 `Cookie.txt` 仅含填写提示，必须替换后才能使用。
 
 Cookie 添加说明（图片加载不出请科学加载）：
 ![Cookie说明](screenShots/login.png) 
@@ -66,13 +73,13 @@ Cookie 添加说明（图片加载不出请科学加载）：
 python main.py
 ```
 
-* 程序会读取 `Cookie.txt`，验证登录状态，再读取当前学期、开放选课类别和课程任务。
+* 程序会读取 `Cookie.txt` 中的域名和 Cookie，检查配置后验证登录状态，再读取当前学期、开放选课类别和课程任务。
 * 默认情况下，核对待选课程后按回车开始提交；输入其他字符则取消。
 * 结果会逐门显示。已选、已满、冲突或选课结束的课程会停止重试。
 
 #### 定时执行
 
-如果希望在指定时间自动开始，提前完成登录、写好 Cookie 后运行：
+如果希望在指定时间自动开始，提前完成登录、填写域名和 Cookie 后运行：
 
 ```bash
 python main.py --start-at "2026-09-05 20:00:00" # 开始时间

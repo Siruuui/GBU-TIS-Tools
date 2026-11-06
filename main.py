@@ -11,7 +11,7 @@ from pathlib import Path
 
 from colorama import Fore, Style, init
 
-from gbu_client import CourseTask, GBUClient, GBUError, LOGIN_URL, Semester
+from gbu_client import CourseTask, GBUClient, GBUError, Semester
 
 
 ROOT = Path(__file__).resolve().parent
@@ -65,15 +65,20 @@ def match_request(request: CourseRequest, tasks: list[CourseTask]) -> tuple[Cour
     return None, f"未找到课程任务：{text}"
 
 
-def load_cookie(path: Path = COOKIE_FILE) -> str:
+def load_config(path: Path = COOKIE_FILE) -> tuple[str, str]:
     if not path.exists():
         raise ValueError(
-            f"未找到 {path.name}。请创建该文件并填入浏览器复制的 Cookie。"
+            f"未找到 {path.name}。请创建该文件，第一行填写教务系统域名，第二行填写 Cookie。"
         )
-    cookie = path.read_text(encoding="utf-8").strip()
+    lines = path.read_text(encoding="utf-8-sig").splitlines()
+    if len(lines) != 2:
+        raise ValueError(f"{path.name} 必须为两行：第一行教务系统域名，第二行 Cookie。")
+    base_url, cookie = (line.strip() for line in lines)
+    if not base_url:
+        raise ValueError(f"{path.name} 第一行为空，请填写教务系统域名。")
     if not cookie:
-        raise ValueError(f"{path.name} 为空，请填入浏览器复制的 Cookie。")
-    return cookie
+        raise ValueError(f"{path.name} 第二行为空，请填入浏览器复制的 Cookie。")
+    return base_url, cookie
 
 
 def wait_until(start_at: str) -> None:
@@ -106,12 +111,17 @@ def run(start_at: str | None = None) -> int:
         return 0
 
     try:
-        cookie = load_cookie()
-        client = GBUClient(cookie)
+        base_url, cookie = load_config()
+        client = GBUClient(base_url, cookie)
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"{Fore.RED}配置读取失败：{exc}{Style.RESET_ALL}")
+        return 1
+
+    try:
         semester = client.current_semester()
-    except (ValueError, GBUError) as exc:
+    except GBUError as exc:
         print(f"{Fore.RED}登录状态验证失败：{exc}{Style.RESET_ALL}")
-        print(f"请先在浏览器打开并完成登录：{LOGIN_URL}")
+        print(f"请先在浏览器打开并完成登录：{client.login_url}")
         return 1
 
     print(f"{Fore.GREEN}登录成功，当前学期：{semester_label(semester)}{Style.RESET_ALL}")

@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 """GBU 教务系统选课接口客户端。
 
-登录由用户在浏览器中完成，本模块只接收当前进程使用的 Cookie。
+登录由用户在浏览器中完成，本模块接收用户配置的域名和 Cookie。
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Iterable
+from urllib.parse import urlsplit
 
 import requests
 
 
-BASE_URL = "https://jwxt.gbu.edu.cn"
-LOGIN_URL = f"{BASE_URL}/authentication/main"
 DEFAULT_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -85,7 +84,32 @@ class SubmissionResult:
 
 
 class GBUClient:
-    def __init__(self, cookie_header: str, timeout: float = 15.0):
+    def __init__(self, base_url: str, cookie_header: str, timeout: float = 15.0):
+        value = base_url.strip()
+        if not value or any(char.isspace() for char in value):
+            raise ValueError("域名不能为空或包含空白字符")
+        if "://" not in value:
+            value = f"https://{value}"
+        try:
+            parsed = urlsplit(value)
+            valid = (
+                parsed.scheme in ("http", "https")
+                and parsed.hostname
+                and parsed.username is None
+                and parsed.password is None
+                and parsed.path in ("", "/")
+                and not parsed.query
+                and not parsed.fragment
+                and parsed.port != 0
+                and not parsed.netloc.endswith(":")
+                and "\\" not in value
+            )
+        except ValueError as exc:
+            raise ValueError("域名格式无效，请填写教务系统域名，可包含 http:// 或 https://") from exc
+        if not valid:
+            raise ValueError("域名格式无效，请只填写教务系统域名，不要包含登录路径、账号或查询参数")
+        self.base_url = f"{parsed.scheme}://{parsed.netloc}"
+        self.login_url = f"{self.base_url}/authentication/main"
         if not cookie_header or not cookie_header.strip():
             raise ValueError("Cookie 不能为空")
         self.session = requests.Session()
@@ -112,7 +136,7 @@ class GBUClient:
     def _post_json(self, path: str, data: dict[str, Any]) -> dict[str, Any]:
         try:
             response = self.session.post(
-                f"{BASE_URL}{path}", data=data, timeout=self.timeout
+                f"{self.base_url}{path}", data=data, timeout=self.timeout
             )
             response.raise_for_status()
             payload = response.json()
