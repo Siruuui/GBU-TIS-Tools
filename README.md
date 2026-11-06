@@ -3,6 +3,7 @@
 这是一个面向**大湾区大学（Great Bay University）教务系统**的命令行选课助手。它读取 `Class.txt` 中的课程优先级，查询当前学期的课程任务，并按文件顺序提交课程。
 
 > 该脚本是通过抽象人对计算机的操作方法，提供节省流量并方便选课的功能。
+> 程序不内置任何学校相关域名，需要自行填写
 
 - 登录由用户在 GBU 统一认证门户手动完成，程序不要求学号或密码。
 - 程序从本地 `Cookie.txt` 第一行读取手动设置的教务系统域名，第二行读取当前会话 Cookie；**请勿上传真实域名和 Cookie 到 GitHub**。
@@ -39,7 +40,7 @@ python -m pip install -r requirements.txt
 
 > 建议在选课开始前再执行，避免 Cookie 过期
 
-1. 打开学校提供的教务系统网址，记下域名。程序不内置教务系统域名，需要自行填写；以下使用 Chrome 浏览器示例。
+1. 打开教务系统，记下域名（以 `.cn` 结尾的网址）。以下使用 Chrome 浏览器示例。
 2. 通过 GBU 统一认证门户完成登录，确认页面已经显示个人信息。
 3. 打开开发者工具：macOS 使用 `⌘ + Option + I`，Windows 使用 `Ctrl + Shift + I`。
 4. 点击 **Network（网络）**，回到教务系统并刷新页面；也可以进入选课页面后再刷新。
@@ -55,7 +56,7 @@ python -m pip install -r requirements.txt
 8. 将项目根目录的 `Cookie.txt` 替换为两行内容：**第一行填教务系统域名，第二行填复制的完整 Cookie**。例如（仅为格式示例，请替换为自己的配置）：
 
    ```text
-   https://jwxt.example.edu
+   https://example.cn
    SESSION=your_session_value; route=your_route_value
    ```
 
